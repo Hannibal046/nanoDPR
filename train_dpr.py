@@ -2,10 +2,12 @@
 import math,logging,json,random,functools,os
 import types
 os.environ["TOKENIZERS_PARALLELISM"]='true'
-os.environ["WANDB_IGNORE_GLOBS"]='files/step-*' ## not upload ckpt to wandb cloud
+os.environ["WANDB_IGNORE_GLOBS"]='*.bin' ## not upload ckpt to wandb cloud
+
 ## third-party
 from accelerate import Accelerator
 from accelerate.logging import get_logger
+from accelerate.utils import DistributedDataParallelKwargs
 import transformers
 from transformers import (
     BertTokenizer,
@@ -33,7 +35,7 @@ logger = get_logger(__name__)
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_file",default='config/train_dpr.yaml')
+    parser.add_argument("--config_file",default='config/train_dpr_nq.yaml')
     args = parser.parse_args()
 
     yaml_config = get_yaml_file(args.config_file)
@@ -117,10 +119,14 @@ class QADataset(torch.utils.data.Dataset):
                                  else random.choice(x['negative_ctxs']) 
                                  for x in samples ]
         elif stage == 'dev':
-            negative_passages = [random.sample(x['hard_negative_ctxs'],
-                                               min(args.num_hard_negative_ctx,len(x['hard_negative_ctxs'])))
-                                +random.sample(x['negative_ctxs'],
-                                               min(args.num_other_negative_ctx,len(x['negative_ctxs'])))
+            negative_passages = [random.sample(
+                                               x['hard_negative_ctxs'],
+                                               min(args.num_hard_negative_ctx,len(x['hard_negative_ctxs']))
+                                               )
+                                +random.sample(
+                                               x['negative_ctxs'],
+                                               min(args.num_other_negative_ctx,len(x['negative_ctxs']))
+                                               )
                                 for x in samples]
             negative_passages = [x for y in negative_passages for x in y]
 
@@ -144,14 +150,13 @@ class QADataset(torch.utils.data.Dataset):
 def validate(model,dataloader,args,accelerator):
     model.eval()
     ranks,losses,hit_cnts = [],[],[]
-    for batch in tqdm(dataloader):
+    for batch in dataloader:
         with torch.no_grad():
             query_embedding,doc_embedding  = model(**batch)
         bs,d_model = query_embedding.shape
         doc_embedding = doc_embedding.view(bs,-1,d_model)
         matching_score = torch.bmm(query_embedding.unsqueeze(1),doc_embedding.permute(0,2,1)).squeeze(1) # bs, num_pos+num_neg
         labels = torch.zeros(bs,dtype=torch.int64).to(matching_score.device)
-        # print(labels,matching_score)
         loss = calculate_dpr_loss(matching_score,labels=labels)
         # hit_cnt = calculate_hit_cnt(matching_score,labels=labels)
         rank = calculate_average_rank(matching_score)
@@ -167,10 +172,12 @@ def validate(model,dataloader,args,accelerator):
 def main():
     args = parse_args()
     set_seed(args.seed)
+    kwargs = DistributedDataParallelKwargs(find_unused_parameters=False)
     accelerator = Accelerator(
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         log_with='wandb',
         mixed_precision='no',
+        kwargs_handlers=[kwargs]
     )
 
     accelerator.init_trackers(
@@ -180,11 +187,6 @@ def main():
     if accelerator.is_local_main_process:
         wandb_tracker = accelerator.get_tracker("wandb")
         LOG_DIR = wandb_tracker.run.dir
-    # else:
-    #     LOG_DIR = [None]
-    # if accelerator.use_distributed:
-    #     dist.broadcast_object_list(LOG_DIR, src=0)
-    # LOG_DIR = LOG_DIR[0]
 
     tokenizer = BertTokenizer.from_pretrained(args.base_model)
     query_encoder = BertModel.from_pretrained(args.base_model,add_pooling_layer=False)
@@ -246,8 +248,10 @@ def main():
                 with accelerator.autocast():
                     bs,_ = query_embedding.shape
                     if accelerator.use_distributed: 
-                        query_embedding = accelerator.gather(query_embedding)
-                        doc_embedding = accelerator.gather(doc_embedding)
+                        doc_list = [torch.zeros_like(doc_embedding) for _ in range(accelerator.num_processes)]
+                        dist.all_gather(tensor_list=doc_list, tensor=doc_embedding.contiguous())
+                        doc_list[dist.get_rank()] = doc_embedding
+                        doc_embedding = torch.cat(doc_list, 0)
                     matching_score = torch.matmul(query_embedding,doc_embedding.permute(1,0))
                     labels = torch.arange(start=bs*GPU_INDEX,end=bs*(GPU_INDEX+1)).to(matching_score.device)
                     
