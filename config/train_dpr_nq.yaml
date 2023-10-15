@@ -1,0 +1,20 @@
+## data
+train_file: downloads/data/retriever/nq-train.json
+dev_file: downloads/data/retriever/nq-dev.json
+
+
+## training
+base_model: bert-base-uncased
+per_device_train_batch_size: 16
+per_device_eval_batch_size: 1
+adam_eps: 1.0e-8
+weight_decay: 0.0
+max_grad_norm: 2.0
+lr: 2.0e-5
+warmup_steps: 1237
+max_train_epochs: 40
+seed: 19980406
+gradient_accumulation_steps: 1
+val_check_interval: 1.0
+num_hard_negative_ctx: 30
+num_other_negative_ctx: 30
