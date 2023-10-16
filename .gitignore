@@ -4,3 +4,7 @@ draft.py
 .empty
 DPR
 wandb
+downloads
+embedding
+__pycache__
+.vscode
