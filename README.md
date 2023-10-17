@@ -11,7 +11,7 @@ python utils/download_data.py --resource data.retriever.qas.nq
 ## Requirements
 ```bash
 # install pytorch according to the cuda version
-pip install transformers accelerate wandb wget gpustat
+pip install transformers accelerate wandb wget gpustat spacy
 conda install -c pytorch faiss-cpu=1.7.4 mkl=2021 blas=1.0=mkl ipykernel
 ```
 

@@ -8,6 +8,8 @@ import torch
 from utils.tokenizers import SimpleTokenizer
 import unicodedata
 import time
+import transformers
+transformers.logging.set_verbosity_error()
 
 def normalize(text):
     return unicodedata.normalize("NFD", text)
@@ -25,7 +27,7 @@ def has_answer(answers,doc):
 if __name__ == '__main__':
 
     ## load QA dataset
-    nq_test_file = "/home/v-xincheng/projects/llm-centered-retrieval/DPR/downloads/data/retriever/qas/nq-test.csv"
+    nq_test_file = "downloads/data/retriever/qas/nq-test.csv"
     query_col,answers_col=0,1
     queries,answers = [],[]
     with open(nq_test_file) as f:
@@ -33,22 +35,19 @@ if __name__ == '__main__':
         for row in reader:
             queries.append(normalize_query(row[query_col]))
             answers.append(eval(row[answers_col]))
-    batch_size = 128
+    batch_size = 32
     queries = [queries[idx:idx+batch_size] for idx in range(0,len(queries),batch_size)]
     
     # make faiss index
     vector_sz = 768 
     index = faiss.IndexFlatIP(vector_sz) 
-    for idx in tqdm(range(50),desc='building index from embedding...'):
-        index_path = f"DPR/dpr/downloads/data/retriever_results/nq/single/wikipedia_passages_{idx}.pkl"
-        data = pickle.load(open(index_path,'rb'))
-        data = [x[1] for x in data]
-        data = np.stack(data, axis=0)
+    for idx in tqdm(range(8),desc='building index from embedding...'):
+        data = np.load(f"embedding/dpr-hf/wikipedia_shard_{idx}.npy")
         index.add(data)  
 
     ## load wikipedia passages
     num_docs = 21015324
-    wikidata_path = "DPR/dpr/downloads/data/wikipedia_split/psgs_w100.tsv"
+    wikidata_path = "downloads/data/wikipedia_split/psgs_w100.tsv"
     id_col,text_col,title_col=0,1,2
     wiki_passages = []
     with open(wikidata_path) as f:
@@ -61,12 +60,14 @@ if __name__ == '__main__':
     model_name = "facebook/dpr-question_encoder-single-nq-base"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     query_encoder = DPRQuestionEncoder.from_pretrained(model_name).to(device)
+    query_encoder.eval()
     toker = DPRQuestionEncoderTokenizer.from_pretrained(model_name)
 
     ## embed queries
     query_embeddings = []
     for query in tqdm(queries,desc='encoding queries...'):
-        query_embedding = query_encoder(**toker(query,max_length=256,truncation=True,padding='max_length',return_tensors='pt').to(device))
+        with torch.no_grad():
+           query_embedding = query_encoder(**toker(query,max_length=256,truncation=True,padding='max_length',return_tensors='pt').to(device))
         query_embedding = query_embedding.pooler_output
         query_embeddings.append(query_embedding.cpu().detach().numpy())
     query_embeddings = np.concatenate(query_embeddings,axis=0)

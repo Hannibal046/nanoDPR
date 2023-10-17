@@ -49,6 +49,6 @@ with distributed_state.split_between_processes(wikipedia) as sharded_wikipedia:
         encoding_progress_bar.update(1)
     doc_embeddings = np.concatenate(doc_embeddings,axis=0)
     os.makedirs("embedding/dpr-hf",exist_ok=True)
-    pickle.dump(doc_embeddings,open(f"embedding/dpr-hf/wikipedia_shard_{distributed_state.process_index}.embedding",'wb'))
+    np.save(f'embedding/dpr-hf/wikipedia_shard_{distributed_state.process_index}.npy',doc_embeddings)
 
 
