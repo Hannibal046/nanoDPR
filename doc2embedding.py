@@ -21,7 +21,7 @@ if __name__ == "__main__":
     NUM_DOCS = 21015324
     PreTrainedModelClass = BertModel
     PreTrainedTokenizerClass = BertTokenizer
-    pretrained_model_name = "wandb/run-20231016_181105-e04snomn/files/step-18400/doc_encoder"  #'facebook/dpr-ctx_encoder-single-nq-base'
+    pretrained_model_name = "wandb/latest-run/files/step-18400/doc_encoder"  #'facebook/dpr-ctx_encoder-single-nq-base'
     output_dir = "embedding/dpr-own"
     
     distributed_state = PartialState()

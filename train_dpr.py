@@ -227,8 +227,7 @@ def main():
     dual_encoder, optimizer, train_dataloader, dev_dataloader = accelerator.prepare(
         dual_encoder, optimizer, train_dataloader, dev_dataloader,
     )
-
-    GPU_INDEX = accelerator.process_index
+    
     NUM_UPDATES_PER_EPOCH = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
     MAX_TRAIN_STEPS = NUM_UPDATES_PER_EPOCH * args.max_train_epochs
     MAX_TRAIN_EPOCHS = math.ceil(MAX_TRAIN_STEPS / NUM_UPDATES_PER_EPOCH)
@@ -246,8 +245,7 @@ def main():
     logger.info(f"  Total optimization steps = {MAX_TRAIN_STEPS}")
     logger.info(f"  Per device eval batch size = {args.per_device_eval_batch_size}")
     completed_steps = 0
-    # progress_bar = tqdm(range(MAX_TRAIN_STEPS), disable=not accelerator.is_local_main_process,ncols=100)
-    progress_bar = tqdm(range(MAX_TRAIN_STEPS), disable=True, ncols=100)
+    progress_bar = tqdm(range(MAX_TRAIN_STEPS), disable=not accelerator.is_local_main_process,ncols=100)
 
     for epoch in range(MAX_TRAIN_EPOCHS):
         set_seed(args.seed+epoch)
