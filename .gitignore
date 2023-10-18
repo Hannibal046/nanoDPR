@@ -8,3 +8,5 @@ downloads
 embedding
 __pycache__
 .vscode
+llama_zero_shot.py
+utils/evaluate.py

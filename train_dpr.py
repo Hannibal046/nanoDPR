@@ -35,6 +35,7 @@ logger = get_logger(__name__)
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
+    ## adding args here for more control from CLI is possible
     parser.add_argument("--config_file",default='config/train_dpr_nq.yaml')
     args = parser.parse_args()
 
@@ -59,8 +60,8 @@ class DualEncoder(nn.Module):
         doc_attention_mask, # [bs*n_doc,seq_len]
         doc_token_type_ids, # [bs*n_doc,seq_len]
     ):  
-        ## [bs,n_dim]
         CLS_POS = 0
+        ## [bs,n_dim]
         query_embedding = self.query_encoder(
             input_ids=query_input_ids,
             attention_mask = query_attention_mask,
@@ -145,7 +146,7 @@ class QADataset(torch.utils.data.Dataset):
             "doc_token_type_ids":doc_inputs.token_type_ids,
         }
 
-def validate(model,dataloader,args,accelerator):
+def validate(model,dataloader,accelerator):
     model.eval()
     query_embeddings = []
     positive_doc_embeddings = []
@@ -163,7 +164,6 @@ def validate(model,dataloader,args,accelerator):
     matching_score = torch.matmul(query_embeddings,doc_embeddings.permute(1,0)) # bs, num_pos+num_neg
     labels = torch.arange(query_embeddings.shape[0],dtype=torch.int64).to(matching_score.device)
     loss = calculate_dpr_loss(matching_score,labels=labels).item()
-    # hit_cnt = calculate_hit_cnt(matching_score,labels=labels)
     ranks = calculate_average_rank(matching_score,labels=labels)
     
     if accelerator.use_distributed and accelerator.num_processes>1:
@@ -281,12 +281,11 @@ def main():
                     accelerator.clip_grad_norm_(dual_encoder.parameters(), args.max_grad_norm)
                     if not accelerator.optimizer_step_was_skipped:
                         lr_scheduler.step()
-                    logger.info(f"step = {completed_steps} loss = {loss}")
                     accelerator.log({"training_loss": loss}, step=completed_steps)
                     accelerator.log({"lr": lr_scheduler.get_last_lr()[0]}, step=completed_steps)
                     
                     if completed_steps % EVAL_STEPS == 0:
-                        avg_rank,loss = validate(dual_encoder,dev_dataloader,args,accelerator)
+                        avg_rank,loss = validate(dual_encoder,dev_dataloader,accelerator)
                         dual_encoder.train()
                         accelerator.log({"avg_rank": avg_rank, "loss":loss}, step=completed_steps)
                         accelerator.wait_for_everyone()

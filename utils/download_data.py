@@ -6,7 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 
 """
- Command line tool to download various preprocessed data sources & checkpoints for DPR
+ Copied from DPR
 """
 
 import argparse
