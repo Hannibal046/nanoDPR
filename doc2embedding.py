@@ -42,7 +42,7 @@ if __name__ == "__main__":
     progress_bar = tqdm(total=args.num_docs, disable=not distributed_state.is_main_process,ncols=100,desc='loading wikipedia...')
     id_col,text_col,title_col=0,1,2
     wikipedia = []
-    with open(args.wikidata_path) as f:
+    with open(args.wikipedia_path) as f:
         reader = csv.reader(f, delimiter="\t")
         for row in reader:
             if row[id_col] == "id":continue

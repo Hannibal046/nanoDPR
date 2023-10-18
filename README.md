@@ -6,18 +6,18 @@ In short, this repo enables:
 - loading the original checkpoint provided by the official repo
 - evaluating dense retriever
 
-## Data
-```python
-python utils/download_data.py --resource data.wikipedia_split.psgs_w100
-python utils/download_data.py --resource data.retriever.nq
-python utils/download_data.py --resource data.retriever.qas.nq
-```
-
 ## Requirements
 ```bash
 # install pytorch according to the cuda version
 # install faiss (https://github.com/facebookresearch/faiss/blob/main/INSTALL.md)
 pip install transformers accelerate wandb wget gpustat spacy
+```
+
+## Data
+```python
+python utils/download_data.py --resource data.wikipedia_split.psgs_w100
+python utils/download_data.py --resource data.retriever.nq
+python utils/download_data.py --resource data.retriever.qas.nq
 ```
 
 ## Training from scratch
@@ -31,7 +31,6 @@ Then launch training with:
 accelerate launch train_dpr.py
 ```
 After training, we would get a trained **query encoder** and a **doc encoder**. 
-
 
 
 ## Evaluation
@@ -50,10 +49,10 @@ accelerate launch doc2embedding.py \
 Then test DPR with:
 ```
 ## for nanoDPR
-python test_dpr.py --embedding_dir embedding/nanoDPR --pretraiend_model_path your/own/nanoDPR/model
+python test_dpr.py --embedding_dir embedding/nanoDPR --pretrained_model_path your/own/nanoDPR/model
 
 ## for official DPR
-python test_dpr.py --embedding_dir embedding/DPR --pretraiend_model_path facebook/dpr-question_encoder-single-nq-base
+python test_dpr.py --embedding_dir embedding/DPR --pretrained_model_path facebook/dpr-question_encoder-single-nq-base
 ```
 Here we provide our trained **query encoder** and **doc encoder** [here](https://drive.google.com/drive/folders/1-6ZdaaxU1eaBacKdSwaQBhllCaea7lEC?usp=share_link).
 
