@@ -8,9 +8,9 @@ In short, this repo enables:
 
 ## Requirements
 ```bash
-# install pytorch according to the cuda version
+# install pytorch according to the cuda version (https://pytorch.org/get-started/previous-versions/)
 # install faiss (https://github.com/facebookresearch/faiss/blob/main/INSTALL.md)
-pip install transformers accelerate wandb wget gpustat spacy
+pip install transformers==4.30.2 accelerate==0.20.3 wandb wget spacy
 ```
 
 ## Data
