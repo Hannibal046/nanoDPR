@@ -57,7 +57,7 @@ if __name__ == '__main__':
     ## load wikipedia passages
     id_col,text_col,title_col=0,1,2
     wiki_passages = []
-    with open(args.wikidata_path) as f:
+    with open(args.wikipedia_path) as f:
         reader = csv.reader(f, delimiter="\t")
         for row in tqdm(reader,total=args.num_docs,desc="loading wikipedia passages..."):
             if row[id_col] == "id":continue
